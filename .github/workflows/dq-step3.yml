@@ -1,0 +1,35 @@
+name: DQ Step 3 — Upload Reports to S3
+on:
+  workflow_dispatch: {}
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      BUCKET: yesh-mldev   # change if you want a different bucket
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install Java & deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jre-headless
+          pip install pyspark==3.5.1 great_expectations==0.18.14 pandas numpy boto3
+      - name: Generate data
+        run: python dq/generate_fake_data.py
+      - name: Run Spark + GE validation
+        run: python dq/spark_validate.py
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Upload to S3
+        run: |
+          RUN_ID=${{ github.run_id }}
+          aws s3 cp artifacts/data_docs s3://$BUCKET/dq/$RUN_ID/data_docs/ --recursive
+          aws s3 cp artifacts/summary.json s3://$BUCKET/dq/$RUN_ID/summary.json
+          echo "Reports at: s3://$BUCKET/dq/$RUN_ID/"
