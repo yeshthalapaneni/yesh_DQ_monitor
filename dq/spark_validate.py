@@ -20,8 +20,8 @@ def run_suite(csv_path, exp_path, name):
     results = []
     for e in exps:
         etype, kwargs = e["type"], e["kwargs"]
-        res = getattr(gdf, etype)(**kwargs).result
-        success = bool(res.get("success", False))
+        ret = getattr(gdf, etype)(**kwargs)         # <— returns an object with .success
+        success = bool(getattr(ret, "success", False))
         results.append({"expectation": etype, "kwargs": kwargs, "success": success})
     # basic HTML report
     html = ["<h2>Report: "+name+"</h2><ul>"]
@@ -29,6 +29,7 @@ def run_suite(csv_path, exp_path, name):
     html.append("</ul>")
     (docs/f"{name}.html").write_text("\n".join(html))
     return results
+
 
 claims_res = run_suite(art/"claims.csv", "dq/expectations/claims_expectations.json", "claims")
 ehr_res    = run_suite(art/"ehr.csv",    "dq/expectations/ehr_expectations.json",    "ehr")
