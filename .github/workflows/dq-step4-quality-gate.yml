@@ -2,14 +2,14 @@ name: DQ Step 4 — Quality Gate (fail on any DQ failures)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 13 * * *"   # runs daily at 13:00 UTC (9:00 ET)
+    - cron: "0 13 * * *"   # daily at 13:00 UTC (9:00 ET)
 
 jobs:
   dq-gate:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: us-east-1
-      BUCKET: yesh-mldev     # your bucket
+      BUCKET: yesh-mldev
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +29,12 @@ jobs:
       - name: Run Spark + GE validation
         run: python dq/spark_validate.py
 
+      # ⬇️ THIS is the “print summary” step ⬇️
+      - name: Print summary
+        run: |
+          echo "=== SUMMARY ==="
+          cat artifacts/summary.json || true
+
       - name: Compute failure count
         id: failcount
         run: |
@@ -41,14 +47,12 @@ with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
     f.write(f"failed={failed}\n")
 PY
 
-      # Quality gate: fail the job if any checks failed
       - name: Enforce quality gate
         if: steps.failcount.outputs.failed != '0'
         run: |
           echo "❌ Data Quality Gate failed: ${{ steps.failcount.outputs.failed }} checks failed."
           exit 1
 
-      # If gate passed, upload reports to S3
       - name: Configure AWS
         if: steps.failcount.outputs.failed == '0'
         uses: aws-actions/configure-aws-credentials@v4
