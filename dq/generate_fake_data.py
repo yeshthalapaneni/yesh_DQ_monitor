@@ -23,7 +23,6 @@ ehr = pd.DataFrame({
   "sbp": rng.normal(118, 20, N).clip(70, 220),
   "rr": rng.normal(18, 4, N).clip(6, 40)
 })
-ehr.loc[rng.choice(N, 3, replace=False), "hr"] = None
 ehr.to_csv(out/"ehr.csv", index=False)
 
 print("Wrote:", [p.name for p in out.iterdir()])
