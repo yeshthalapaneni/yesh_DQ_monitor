@@ -1,0 +1,66 @@
+name: DQ Step 4 — Quality Gate (fail on any DQ failures)
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 13 * * *"   # runs daily at 13:00 UTC (9:00 ET)
+
+jobs:
+  dq-gate:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      BUCKET: yesh-mldev     # your bucket
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Install Java & deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jre-headless
+          pip install pyspark==3.5.1 great_expectations==0.18.14 pandas numpy boto3
+
+      - name: Generate fake data
+        run: python dq/generate_fake_data.py
+
+      - name: Run Spark + GE validation
+        run: python dq/spark_validate.py
+
+      - name: Compute failure count
+        id: failcount
+        run: |
+          python - << 'PY'
+import json, os
+s = json.load(open('artifacts/summary.json'))
+failed = s['claims']['failed'] + s['ehr']['failed']
+print("FAILED_CHECKS=", failed)
+with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+    f.write(f"failed={failed}\n")
+PY
+
+      # Quality gate: fail the job if any checks failed
+      - name: Enforce quality gate
+        if: steps.failcount.outputs.failed != '0'
+        run: |
+          echo "❌ Data Quality Gate failed: ${{ steps.failcount.outputs.failed }} checks failed."
+          exit 1
+
+      # If gate passed, upload reports to S3
+      - name: Configure AWS
+        if: steps.failcount.outputs.failed == '0'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload reports to S3 (gate passed)
+        if: steps.failcount.outputs.failed == '0'
+        run: |
+          RUN_ID=${{ github.run_id }}
+          aws s3 cp artifacts/data_docs s3://$BUCKET/dq/$RUN_ID/data_docs/ --recursive
+          aws s3 cp artifacts/summary.json s3://$BUCKET/dq/$RUN_ID/summary.json
+          echo "✅ Gate passed. Reports at s3://$BUCKET/dq/$RUN_ID/"
