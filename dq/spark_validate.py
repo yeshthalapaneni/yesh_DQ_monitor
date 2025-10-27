@@ -20,15 +20,21 @@ def run_suite(csv_path, exp_path, name):
     results = []
     for e in exps:
         etype, kwargs = e["type"], e["kwargs"]
-        ret = getattr(gdf, etype)(**kwargs)         # <— returns an object with .success
-        success = bool(getattr(ret, "success", False))
+        ret = getattr(gdf, etype)(**kwargs)
+        # Great Expectations may return an object or a dict; handle both:
+        if isinstance(ret, dict):
+            success = bool(ret.get("success", False))
+        else:
+            success = bool(getattr(ret, "success", False))
         results.append({"expectation": etype, "kwargs": kwargs, "success": success})
-    # basic HTML report
+
+    # minimal HTML report
     html = ["<h2>Report: "+name+"</h2><ul>"]
     html += [f"<li>{r['expectation']} — <b>{'PASS' if r['success'] else 'FAIL'}</b></li>" for r in results]
     html.append("</ul>")
     (docs/f"{name}.html").write_text("\n".join(html))
     return results
+
 
 
 claims_res = run_suite(art/"claims.csv", "dq/expectations/claims_expectations.json", "claims")
