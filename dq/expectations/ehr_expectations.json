@@ -1,0 +1,10 @@
+{
+  "expectations": [
+    {"type": "expect_table_columns_to_match_set",
+     "kwargs": {"column_set": ["encounter_id","patient_id","hr","sbp","rr"]}},
+    {"type": "expect_column_values_to_not_be_null", "kwargs": {"column": "encounter_id"}},
+    {"type": "expect_column_values_to_be_between", "kwargs": {"column": "hr","min_value": 30,"max_value": 220}},
+    {"type": "expect_column_values_to_be_between", "kwargs": {"column": "sbp","min_value": 60,"max_value": 260}},
+    {"type": "expect_column_values_to_be_between", "kwargs": {"column": "rr","min_value": 4,"max_value": 60}}
+  ]
+}
