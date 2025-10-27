@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"type": "expect_table_columns_to_match_set",
+     "kwargs": {"column_set": ["claim_id","patient_id","amount","cpt_code","paid","dt"]}},
+    {"type": "expect_column_values_to_not_be_null", "kwargs": {"column": "claim_id"}},
+    {"type": "expect_column_values_to_not_be_null", "kwargs": {"column": "patient_id"}},
+    {"type": "expect_column_values_to_not_be_null", "kwargs": {"column": "amount"}},
+    {"type": "expect_column_values_to_be_between", "kwargs": {"column": "amount","min_value": 0}},
+    {"type": "expect_column_values_to_be_in_set",
+     "kwargs": {"column": "cpt_code","value_set": ["99213","93000","80050","12001","70450"]}}
+  ]
+}
