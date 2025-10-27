@@ -37,14 +37,8 @@ jobs:
 
       - name: Compute failure count
         id: failcount
-        shell: bash
         run: |
-          FAILED=$(python - <<'PY'
-import json
-s = json.load(open('artifacts/summary.json'))
-print(s['claims']['failed'] + s['ehr']['failed'])
-PY
-)
+          FAILED=$(python -c "import json; s=json.load(open('artifacts/summary.json')); print(s['claims']['failed']+s['ehr']['failed'])")
           echo "FAILED_CHECKS=$FAILED"
           echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
 
