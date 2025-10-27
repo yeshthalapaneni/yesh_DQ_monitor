@@ -1,0 +1,27 @@
+name: DQ Step 1 — Generate Fake Data
+on:
+  workflow_dispatch: {}   # lets you click "Run workflow" in Actions
+
+jobs:
+  gen-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pandas numpy
+
+      - name: Generate fake hospital datasets
+        run: python dq/generate_fake_data.py
+
+      - name: Upload artifacts (claims.csv, ehr.csv)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fake-hospital-data
+          path: artifacts/*
