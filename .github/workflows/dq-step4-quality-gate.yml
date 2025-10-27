@@ -15,7 +15,8 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.11"
 
       - name: Install Java & deps
         run: |
@@ -29,7 +30,6 @@ jobs:
       - name: Run Spark + GE validation
         run: python dq/spark_validate.py
 
-      # ⬇️ THIS is the “print summary” step ⬇️
       - name: Print summary
         run: |
           echo "=== SUMMARY ==="
@@ -37,15 +37,16 @@ jobs:
 
       - name: Compute failure count
         id: failcount
+        shell: bash
         run: |
-          python - << 'PY'
-import json, os
+          FAILED=$(python - <<'PY'
+import json
 s = json.load(open('artifacts/summary.json'))
-failed = s['claims']['failed'] + s['ehr']['failed']
-print("FAILED_CHECKS=", failed)
-with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-    f.write(f"failed={failed}\n")
+print(s['claims']['failed'] + s['ehr']['failed'])
 PY
+)
+          echo "FAILED_CHECKS=$FAILED"
+          echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
 
       - name: Enforce quality gate
         if: steps.failcount.outputs.failed != '0'
