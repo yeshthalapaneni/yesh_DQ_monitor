@@ -13,7 +13,6 @@ claims = pd.DataFrame({
   "dt": pd.to_datetime("today").normalize()
 })
 # add a few nulls to test data quality checks
-claims.loc[rng.choice(N, 5, replace=False), "amount"] = None
 claims.to_csv(out/"claims.csv", index=False)
 
 # ehr.csv — simple vitals table with a few nulls
