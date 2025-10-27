@@ -1,0 +1,34 @@
+name: DQ Step 2 — Spark + Great Expectations
+on:
+  workflow_dispatch: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Java and Python deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jre-headless
+          pip install pyspark==3.5.1 great_expectations==0.18.14 pandas numpy
+
+      - name: Generate fake data
+        run: python dq/generate_fake_data.py
+
+      - name: Run Spark + GE validation
+        run: python dq/spark_validate.py
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dq-reports
+          path: |
+            artifacts/data_docs/*
+            artifacts/summary.json
