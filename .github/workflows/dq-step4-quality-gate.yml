@@ -6,8 +6,6 @@ on:
         description: "Force a Slack alert (yes/no)"
         required: false
         default: "no"
-  schedule:
-    - cron: "0 13 * * *"   # daily at 13:00 UTC (9:00 ET)
 
 jobs:
   dq-gate:
@@ -47,22 +45,19 @@ jobs:
         run: |
           FAILED=$(python -c "import json; s=json.load(open('artifacts/summary.json')); print(s['claims']['failed']+s['ehr']['failed'])")
           if [ \"${FORCE_FAIL}\" = \"yes\" ]; then FAILED=$((FAILED+1)); fi
-          echo \"FAILED_CHECKS=$FAILED\"
-          echo \"failed=$FAILED\" >> \"$GITHUB_OUTPUT\"
+          echo "FAILED_CHECKS=$FAILED"
+          echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
 
       - name: Slack alert (on failures)
         if: steps.failcount.outputs.failed != '0'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          FAILS: ${{ steps.failcount.outputs.failed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPO: ${{ github.repository }}
         run: |
-          RUN_URL=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
-          TEXT="*DQ ALERT* ❌
-Repo: \`${{ github.repository }}\`
-Run: ${RUN_URL}
-Failed checks: ${{ steps.failcount.outputs.failed }}.
-See the 'Print summary' step for details."
-          printf '%s' "{\"text\":\"$TEXT\"}" > payload.json
-          curl -X POST -H 'Content-type: application/json' --data @payload.json "$SLACK_WEBHOOK_URL"
+          payload='{"text":"*DQ ALERT* ❌\nRepo: '"$REPO"'\nRun: '"$RUN_URL"'\nFailed checks: '"$FAILS"'."}'
+          curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"
 
       - name: Enforce quality gate
         if: steps.failcount.outputs.failed != '0'
