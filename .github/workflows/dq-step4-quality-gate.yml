@@ -63,10 +63,3 @@ jobs:
           aws s3 cp artifacts/data_docs s3://$BUCKET/dq/$RUN_ID/data_docs/ --recursive
           aws s3 cp artifacts/summary.json s3://$BUCKET/dq/$RUN_ID/summary.json
           echo "✅ Gate passed. Reports at s3://$BUCKET/dq/$RUN_ID/"
-    - name: Test Slack
-      if: always()
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-      run: |
-        echo '{"text":"Hello from Yesh’s DQ pipeline ✅"}' > payload.json
-        curl -X POST -H 'Content-type: application/json' --data @payload.json "$SLACK_WEBHOOK_URL"
