@@ -1,6 +1,11 @@
 name: DQ Step 4 — Quality Gate (fail on any DQ failures)
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "Force a Slack alert (yes/no)"
+        required: false
+        default: "no"
   schedule:
     - cron: "0 13 * * *"   # daily at 13:00 UTC (9:00 ET)
 
@@ -37,10 +42,27 @@ jobs:
 
       - name: Compute failure count
         id: failcount
+        env:
+          FORCE_FAIL: ${{ github.event.inputs.force_fail }}
         run: |
           FAILED=$(python -c "import json; s=json.load(open('artifacts/summary.json')); print(s['claims']['failed']+s['ehr']['failed'])")
-          echo "FAILED_CHECKS=$FAILED"
-          echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
+          if [ \"${FORCE_FAIL}\" = \"yes\" ]; then FAILED=$((FAILED+1)); fi
+          echo \"FAILED_CHECKS=$FAILED\"
+          echo \"failed=$FAILED\" >> \"$GITHUB_OUTPUT\"
+
+      - name: Slack alert (on failures)
+        if: steps.failcount.outputs.failed != '0'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          RUN_URL=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+          TEXT="*DQ ALERT* ❌
+Repo: \`${{ github.repository }}\`
+Run: ${RUN_URL}
+Failed checks: ${{ steps.failcount.outputs.failed }}.
+See the 'Print summary' step for details."
+          printf '%s' "{\"text\":\"$TEXT\"}" > payload.json
+          curl -X POST -H 'Content-type: application/json' --data @payload.json "$SLACK_WEBHOOK_URL"
 
       - name: Enforce quality gate
         if: steps.failcount.outputs.failed != '0'
@@ -48,7 +70,7 @@ jobs:
           echo "❌ Data Quality Gate failed: ${{ steps.failcount.outputs.failed }} checks failed."
           exit 1
 
-      - name: Configure AWS
+      - name: Configure AWS (gate passed)
         if: steps.failcount.outputs.failed == '0'
         uses: aws-actions/configure-aws-credentials@v4
         with:
